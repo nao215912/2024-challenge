@@ -1,19 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { GameEngine } from "./engine";
+import { GameEngine } from "../engine";
+import { createDeterministicRandom } from "./test-helpers";
 
-function createDeterministicRandom(sequence: number[]): () => number {
-  let index = 0;
-  return () => {
-    const fallback = sequence[sequence.length - 1] ?? 0;
-    const value = sequence[index] ?? fallback;
-    index += 1;
-    return value;
-  };
-}
-
-describe("GameEngine", () => {
-  it("左方向への移動で結合しスコアを加算する", () => {
+describe("GameEngine 左方向の移動", () => {
+  it("結合してスコアを加算し新しいタイルを生成する", () => {
     const engine = new GameEngine({ random: createDeterministicRandom([0, 0]) });
     engine.setGrid([
       [2, 2, 0, 0],
@@ -27,7 +18,7 @@ describe("GameEngine", () => {
     expect(result.moved).toBe(true);
     expect(result.scoreGained).toBe(4);
     expect(engine.score).toBe(4);
-    // 結合後のマスに 4、空きマスの最初に新しい 2 が配置される
+    expect(result.addedTile?.value).toBe(2);
     expect(engine.getGridValues()[0]).toEqual([4, 2, 0, 0]);
     expect(engine.tiles.some((tile) => tile.pendingRemoval)).toBe(true);
 
@@ -35,7 +26,7 @@ describe("GameEngine", () => {
     expect(engine.tiles.every((tile) => !tile.pendingRemoval)).toBe(true);
   });
 
-  it("同一方向で 2 回以上結合しない", () => {
+  it("同一方向の移動で 1 回のみ結合する", () => {
     const engine = new GameEngine({ random: createDeterministicRandom([0, 0]) });
     engine.setGrid([
       [2, 2, 2, 0],
@@ -50,19 +41,5 @@ describe("GameEngine", () => {
     expect(engine.score).toBe(4);
     expect(engine.getGridValues()[0]).toEqual([4, 2, 2, 0]);
   });
-
-  it("移動できない場合はゲームオーバーになる", () => {
-    const engine = new GameEngine();
-    engine.setGrid([
-      [2, 4, 2, 4],
-      [4, 2, 4, 2],
-      [2, 4, 2, 4],
-      [4, 2, 4, 2],
-    ]);
-
-    const result = engine.move("left");
-
-    expect(result.moved).toBe(false);
-    expect(engine.gameOver).toBe(true);
-  });
 });
+
