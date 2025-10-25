@@ -1,6 +1,6 @@
-import { Position } from "../types/position";
+import { Position } from '../types/position';
 
-import { Tile } from "./tile";
+import { Tile } from './tile';
 
 export class TileFactory {
   private nextId = 0;

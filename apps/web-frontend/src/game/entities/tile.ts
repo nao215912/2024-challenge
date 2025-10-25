@@ -1,4 +1,4 @@
-import { Position } from "../types/position";
+import { Position } from '../types/position';
 
 export class Tile {
   previousRow: number | null = null;
@@ -11,7 +11,7 @@ export class Tile {
   constructor(
     public readonly id: number,
     public value: number,
-    position: Position,
+    position: Position
   ) {
     this.row = position.row;
     this.col = position.col;

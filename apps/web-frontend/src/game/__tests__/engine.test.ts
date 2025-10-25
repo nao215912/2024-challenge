@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
-import { GameEngine } from "../engine";
-import { createDeterministicRandom } from "./test-helpers";
+import { GameEngine } from '../engine';
+import { createDeterministicRandom } from './test-helpers';
 
-describe("GameEngine 初期化とリセット", () => {
-  it("reset で 2 つの初期タイルを生成する", () => {
+describe('GameEngine 初期化とリセット', () => {
+  it('reset で 2 つの初期タイルを生成する', () => {
     const engine = new GameEngine({ random: createDeterministicRandom([0, 0.5, 0.45, 0.1]) });
 
     engine.reset();
@@ -17,7 +17,7 @@ describe("GameEngine 初期化とリセット", () => {
     expect(engine.gameOver).toBe(false);
   });
 
-  it("リセット時にスコアを初期化しベストスコアを保持する", () => {
+  it('リセット時にスコアを初期化しベストスコアを保持する', () => {
     const engine = new GameEngine({
       bestScore: 0,
       random: createDeterministicRandom([0, 0.99, 0, 0.5, 0.45, 0.1]),
@@ -29,7 +29,7 @@ describe("GameEngine 初期化とリセット", () => {
       [0, 0, 0, 0],
     ]);
 
-    engine.move("left");
+    engine.move('left');
     expect(engine.score).toBe(128);
     expect(engine.bestScore).toBe(128);
 

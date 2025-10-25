@@ -1,7 +1,7 @@
-import { Position } from "../types/position";
-import { Vector } from "../types/direction";
+import { Position } from '../types/position';
+import { Vector } from '../types/direction';
 
-import { Tile } from "./tile";
+import { Tile } from './tile';
 
 export interface TraversalOrder {
   rows: number[];
@@ -114,7 +114,7 @@ export class GameGrid {
 
   findFarthestPosition(
     start: Position,
-    vector: Vector,
+    vector: Vector
   ): { farthest: Position; next: Position | null } {
     let previous: Position = { row: start.row, col: start.col };
     let row = start.row + vector.y;
