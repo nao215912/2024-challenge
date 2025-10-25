@@ -15,4 +15,3 @@ export class TileFactory {
     this.nextId = 0;
   }
 }
-

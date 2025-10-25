@@ -19,4 +19,3 @@ export function getVector(direction: Direction): Vector {
       return { x: 0, y: 0 };
   }
 }
-

@@ -42,4 +42,3 @@ describe("GameEngine 左方向の移動", () => {
     expect(engine.getGridValues()[0]).toEqual([4, 2, 2, 0]);
   });
 });
-

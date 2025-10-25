@@ -112,7 +112,10 @@ export class GameGrid {
     return false;
   }
 
-  findFarthestPosition(start: Position, vector: Vector): { farthest: Position; next: Position | null } {
+  findFarthestPosition(
+    start: Position,
+    vector: Vector,
+  ): { farthest: Position; next: Position | null } {
     let previous: Position = { row: start.row, col: start.col };
     let row = start.row + vector.y;
     let col = start.col + vector.x;
@@ -149,4 +152,3 @@ export class GameGrid {
     return Array.from({ length: size }, () => Array.from({ length: size }, () => null));
   }
 }
-

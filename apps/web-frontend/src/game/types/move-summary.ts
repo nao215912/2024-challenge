@@ -5,4 +5,3 @@ export interface MoveSummary {
   scoreGained: number;
   addedTile: Tile | null;
 }
-

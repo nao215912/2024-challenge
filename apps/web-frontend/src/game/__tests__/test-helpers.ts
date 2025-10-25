@@ -7,4 +7,3 @@ export function createDeterministicRandom(sequence: number[]): () => number {
     return value;
   };
 }
-

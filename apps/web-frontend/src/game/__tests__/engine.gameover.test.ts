@@ -34,4 +34,3 @@ describe("GameEngine ゲームオーバー判定", () => {
     expect(engine.movesAvailable()).toBe(true);
   });
 });
-

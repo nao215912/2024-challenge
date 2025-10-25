@@ -150,4 +150,3 @@ export type { MoveSummary } from "./types/move-summary";
 export type { Position } from "./types/position";
 export type { Direction } from "./types/direction";
 export { Tile } from "./entities/tile";
-

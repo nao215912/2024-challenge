@@ -44,12 +44,7 @@ export class TileSlider {
     const nextTile = next ? grid.getCell(next) : null;
 
     // マージ可能な場合
-    if (
-      next &&
-      nextTile &&
-      nextTile.value === tile.value &&
-      !nextTile.mergedThisTurn
-    ) {
+    if (next && nextTile && nextTile.value === tile.value && !nextTile.mergedThisTurn) {
       const mergedValue = grid.mergeTiles(tile, nextTile);
       return { moved: true, scoreGained: mergedValue };
     }
