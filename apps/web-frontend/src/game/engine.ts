@@ -1,11 +1,11 @@
-import { GameGrid } from './entities/game-grid';
-import { ScoreKeeper } from './entities/score-keeper';
-import { Tile } from './entities/tile';
-import { TileFactory } from './entities/tile-factory';
-import { TileSlider } from './entities/tile-slider';
-import type { Direction } from './types/direction';
-import type { MoveSummary } from './types/move-summary';
-import type { Position } from './types/position';
+import { GameGrid } from './game-grid';
+import { ScoreKeeper } from './score-keeper';
+import { Tile } from './tile';
+import { TileFactory } from './tile-factory';
+import { TileSlider } from './tile-slider';
+import type { Direction } from './direction';
+import type { MoveSummary } from './/move-summary';
+import type { Position } from './position';
 
 const DEFAULT_SIZE = 4;
 
@@ -145,8 +145,3 @@ export class GameEngine {
     return tile;
   }
 }
-
-export type { MoveSummary } from './types/move-summary';
-export type { Position } from './types/position';
-export type { Direction } from './types/direction';
-export { Tile } from './entities/tile';

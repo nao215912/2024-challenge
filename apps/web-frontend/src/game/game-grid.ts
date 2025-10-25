@@ -1,5 +1,5 @@
-import { Position } from '../types/position';
-import { Vector } from '../types/direction';
+import type { Position } from './position';
+import type { Vector } from './direction';
 
 import { Tile } from './tile';
 

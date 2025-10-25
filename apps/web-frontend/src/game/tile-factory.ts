@@ -1,4 +1,4 @@
-import { Position } from '../types/position';
+import type { Position } from './position';
 
 import { Tile } from './tile';
 

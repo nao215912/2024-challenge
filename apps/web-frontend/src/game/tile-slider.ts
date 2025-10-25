@@ -1,6 +1,6 @@
-import type { Direction, Vector } from '../types/direction';
-import { getVector } from '../types/direction';
-import { GameGrid } from './game-grid';
+import type { Direction, Vector } from './direction';
+import { getVector } from './direction';
+import type { GameGrid } from './game-grid';
 import type { Tile } from './tile';
 
 export interface SlideResult {
