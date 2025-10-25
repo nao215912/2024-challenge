@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, type ComponentPublicInstance } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { useElementSize, useSwipe } from '@vueuse/core';
 import { Tile, type Direction } from '@/game';
 
@@ -65,47 +65,44 @@ const getTranslateStyle = (tile: Tile) => {
   };
 };
 
-// DOM参照とアニメーション管理
-const bodyRefs = new Map<number, HTMLElement>();
-const animatedOnce = new Set<number>();
+// アニメーション状態管理
+const animatingTiles = ref<Set<number>>(new Set());
 
-const setBodyRef = (el: Element | ComponentPublicInstance | null, tile: Tile) => {
-  const element = el as HTMLElement | null;
-
-  if (element) {
-    bodyRefs.set(tile.id, element);
-
-    // マウント直後に1回だけアニメーションクラスを付与
-    if (!animatedOnce.has(tile.id)) {
-      nextTick(() => {
-        if (tile.isNew) {
-          element.classList.add('is-new');
-          tile.isNew = false;
-        }
-        if (tile.justMerged) {
-          element.classList.add('is-merged');
-          tile.justMerged = false;
-        }
-        animatedOnce.add(tile.id);
-      });
-    }
-  } else {
-    bodyRefs.delete(tile.id);
-    animatedOnce.delete(tile.id);
+// タイルのアニメーションクラスを計算
+const getTileAnimationClass = (tile: Tile) => {
+  // アニメーション中のタイルは何も返さない（アニメーション完了後）
+  if (animatingTiles.value.has(tile.id)) {
+    return '';
   }
+
+  // 新規タイルまたはマージされたタイルの場合
+  if (tile.isNew) {
+    // アニメーション開始をマーク
+    nextTick(() => {
+      animatingTiles.value.add(tile.id);
+      tile.isNew = false;
+    });
+    return 'is-new';
+  }
+
+  if (tile.justMerged) {
+    // アニメーション開始をマーク
+    nextTick(() => {
+      animatingTiles.value.add(tile.id);
+      tile.justMerged = false;
+    });
+    return 'is-merged';
+  }
+
+  return '';
 };
 
 // アニメーション終了時の処理
-const handleAnimEnd = (tileId: number, event: AnimationEvent) => {
-  if (event.animationName === 'pop-in' || event.animationName === 'merge-bounce') {
-    const element = bodyRefs.get(tileId);
-    if (element) {
-      element.classList.remove('is-new', 'is-merged');
-    }
-  }
+const handleAnimEnd = (tileId: number) => {
+  animatingTiles.value.delete(tileId);
 };
 
-// スワイプ操作（VueUse）
+// スワイプ操作
 const { direction: swipeDirection } = useSwipe(gridRef, {
   threshold: 30,
   onSwipe() {
@@ -144,10 +141,13 @@ const { direction: swipeDirection } = useSwipe(gridRef, {
         :style="getTranslateStyle(tile)"
       >
         <div
-          :ref="(el: any) => setBodyRef(el, tile)"
           class="tile-scale flex h-full w-full items-center justify-center font-bold rounded-lg transition-transform duration-150 ease-in-out"
-          :class="[getTileColor(tile.value), getTileTextColor(tile.value)]"
-          @animationend="(e: AnimationEvent) => handleAnimEnd(tile.id, e as AnimationEvent)"
+          :class="[
+            getTileColor(tile.value),
+            getTileTextColor(tile.value),
+            getTileAnimationClass(tile),
+          ]"
+          @animationend="() => handleAnimEnd(tile.id)"
         >
           <span :class="tile.value >= 1024 ? 'text-3xl' : 'text-4xl'">{{ tile.value }}</span>
         </div>
