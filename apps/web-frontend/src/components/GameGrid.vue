@@ -144,10 +144,10 @@ const { direction: swipeDirection } = useSwipe(gridRef, {
         :style="getTranslateStyle(tile)"
       >
         <div
-          :ref="(el) => setBodyRef(el, tile)"
+          :ref="(el: any) => setBodyRef(el, tile)"
           class="tile-scale flex h-full w-full items-center justify-center font-bold rounded-lg transition-transform duration-150 ease-in-out"
           :class="[getTileColor(tile.value), getTileTextColor(tile.value)]"
-          @animationend="(e) => handleAnimEnd(tile.id, e as AnimationEvent)"
+          @animationend="(e: AnimationEvent) => handleAnimEnd(tile.id, e as AnimationEvent)"
         >
           <span :class="tile.value >= 1024 ? 'text-3xl' : 'text-4xl'">{{ tile.value }}</span>
         </div>
