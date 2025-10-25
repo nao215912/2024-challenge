@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, nextTick, type ComponentPublicInstance } from 'vue';
+import { useElementSize, useSwipe } from '@vueuse/core';
 import { Tile, type Direction } from '@/game';
+
+defineOptions({
+  name: 'GameGrid',
+});
 
 interface Props {
   tiles: Tile[];
   size: number;
   gameOver: boolean;
 }
+
 interface Emits {
   (e: 'restart'): void;
   (e: 'move', direction: Direction): void;
@@ -15,9 +21,13 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
-// 色
-const getTileColor = (v: number) => {
-  const c: Record<number, string> = {
+// グリッドサイズの監視（VueUse）
+const gridRef = ref<HTMLElement>();
+const { width: containerWidth } = useElementSize(gridRef);
+
+// タイル色
+const getTileColor = (value: number): string => {
+  const colors: Record<number, string> = {
     2: 'bg-[#eee4da]',
     4: 'bg-[#ede0c8]',
     8: 'bg-[#f2b179]',
@@ -30,29 +40,19 @@ const getTileColor = (v: number) => {
     1024: 'bg-[#edc53f]',
     2048: 'bg-[#edc22e]',
   };
-  return c[v] || 'bg-[#3c3a32]';
-};
-const getTileTextColor = (v: number) => {
-  if (v === 2 || v === 4) return 'text-[#776e65]'; // 黒文字
-  return 'text-white'; // その他は白
+  return colors[value] || 'bg-[#3c3a32]';
 };
 
-// サイズ・位置
-const gridRef = ref<HTMLElement | null>(null);
-const containerSize = ref(0);
-const gap = 8;
-let observer: ResizeObserver | null = null;
+const getTileTextColor = (value: number): string => {
+  return value <= 4 ? 'text-[#776e65]' : 'text-white';
+};
 
-onMounted(() => {
-  if (!gridRef.value) return;
-  observer = new ResizeObserver(([entry]) => (containerSize.value = entry.contentRect.width));
-  observer.observe(gridRef.value);
-});
-onBeforeUnmount(() => observer?.disconnect());
+// タイル位置とサイズの計算
+const gap = 8; // gap-2 = 8px
 
 const cellSize = computed(() => {
   const totalGap = (props.size - 1) * gap;
-  return (containerSize.value - totalGap) / props.size;
+  return (containerWidth.value - totalGap) / props.size;
 });
 
 const getTranslateStyle = (tile: Tile) => {
@@ -65,28 +65,25 @@ const getTranslateStyle = (tile: Tile) => {
   };
 };
 
-// DOM参照とアニメ付与
-const tileRefs = new Map<number, HTMLElement>(); // 外側(translate) の div
-const bodyRefs = new Map<number, HTMLElement>(); // 内側(scale) の div
-const animatedOnce = new Set<number>(); // マウント直後の重複防止
+// DOM参照とアニメーション管理
+const bodyRefs = new Map<number, HTMLElement>();
+const animatedOnce = new Set<number>();
 
-const setTileRef = (el: HTMLElement | null, tile: Tile) => {
-  if (el) tileRefs.set(tile.id, el);
-  else tileRefs.delete(tile.id);
-};
-const setBodyRef = (el: HTMLElement | null, tile: Tile) => {
-  if (el) {
-    bodyRefs.set(tile.id, el);
-    // マウント直後に1回だけアニメ用クラスを付与（“2アクション”防止）
+const setBodyRef = (el: Element | ComponentPublicInstance | null, tile: Tile) => {
+  const element = el as HTMLElement | null;
+
+  if (element) {
+    bodyRefs.set(tile.id, element);
+
+    // マウント直後に1回だけアニメーションクラスを付与
     if (!animatedOnce.has(tile.id)) {
       nextTick(() => {
-        // isNew / justMerged はエンジンが付ける前提
         if (tile.isNew) {
-          el.classList.add('is-new');
+          element.classList.add('is-new');
           tile.isNew = false;
         }
         if (tile.justMerged) {
-          el.classList.add('is-merged');
+          element.classList.add('is-merged');
           tile.justMerged = false;
         }
         animatedOnce.add(tile.id);
@@ -98,36 +95,33 @@ const setBodyRef = (el: HTMLElement | null, tile: Tile) => {
   }
 };
 
-// アニメ終了でクラス除去（次回に備える）
-const handleAnimEnd = (tileId: number, e: AnimationEvent) => {
-  if (e.animationName === 'pop-in' || e.animationName === 'merge-bounce') {
-    const el = bodyRefs.get(tileId);
-    if (!el) return;
-    el.classList.remove('is-new', 'is-merged');
+// アニメーション終了時の処理
+const handleAnimEnd = (tileId: number, event: AnimationEvent) => {
+  if (event.animationName === 'pop-in' || event.animationName === 'merge-bounce') {
+    const element = bodyRefs.get(tileId);
+    if (element) {
+      element.classList.remove('is-new', 'is-merged');
+    }
   }
 };
 
-// タッチ
-const touchStartX = ref(0),
-  touchStartY = ref(0);
-const handleTouchStart = (e: TouchEvent) => {
-  const t = e.touches[0];
-  if (!t) return;
-  touchStartX.value = t.clientX;
-  touchStartY.value = t.clientY;
-};
-const handleTouchEnd = (e: TouchEvent) => {
-  const t = e.changedTouches[0];
-  if (!t) return;
-  const dx = t.clientX - touchStartX.value,
-    dy = t.clientY - touchStartY.value;
-  const min = 30;
-  if (Math.abs(dx) > Math.abs(dy)) {
-    if (Math.abs(dx) > min) emit('move', dx > 0 ? 'right' : 'left');
-  } else {
-    if (Math.abs(dy) > min) emit('move', dy > 0 ? 'down' : 'up');
-  }
-};
+// スワイプ操作（VueUse）
+const { direction: swipeDirection } = useSwipe(gridRef, {
+  threshold: 30,
+  onSwipe() {
+    const directionMap: Record<string, Direction> = {
+      left: 'left',
+      right: 'right',
+      up: 'up',
+      down: 'down',
+    };
+
+    const dir = directionMap[swipeDirection.value];
+    if (dir) {
+      emit('move', dir);
+    }
+  },
+});
 </script>
 
 <template>
@@ -135,8 +129,6 @@ const handleTouchEnd = (e: TouchEvent) => {
     ref="gridRef"
     class="relative bg-[#bbada0] rounded-lg p-2 w-full max-w-md aspect-square overflow-hidden"
     :style="{ touchAction: 'none' }"
-    @touchstart="handleTouchStart"
-    @touchend="handleTouchEnd"
   >
     <!-- 背景 -->
     <div class="grid gap-2 w-full h-full" :style="{ gridTemplateColumns: `repeat(${size}, 1fr)` }">
@@ -148,7 +140,6 @@ const handleTouchEnd = (e: TouchEvent) => {
       <div
         v-for="tile in tiles"
         :key="tile.id"
-        :ref="(el) => setTileRef(el, tile)"
         class="tile-translate absolute rounded-lg"
         :style="getTranslateStyle(tile)"
       >
@@ -156,7 +147,7 @@ const handleTouchEnd = (e: TouchEvent) => {
           :ref="(el) => setBodyRef(el, tile)"
           class="tile-scale flex h-full w-full items-center justify-center font-bold rounded-lg transition-transform duration-150 ease-in-out"
           :class="[getTileColor(tile.value), getTileTextColor(tile.value)]"
-          @animationend="(e) => handleAnimEnd(tile.id, e)"
+          @animationend="(e) => handleAnimEnd(tile.id, e as AnimationEvent)"
         >
           <span :class="tile.value >= 1024 ? 'text-3xl' : 'text-4xl'">{{ tile.value }}</span>
         </div>
