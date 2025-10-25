@@ -16,6 +16,7 @@ interface Props {
 interface Emits {
   (e: 'restart'): void;
   (e: 'move', direction: Direction): void;
+  (e: 'animationComplete'): void;
 }
 
 const props = defineProps<Props>();
@@ -100,6 +101,19 @@ const getTileAnimationClass = (tile: Tile) => {
 // アニメーション終了時の処理
 const handleAnimEnd = (tileId: number) => {
   animatingTiles.value.delete(tileId);
+
+// すべてのアニメーション完了を検知して通知
+const notifyAnimationComplete = () => {
+  const totalAnimationTime = ANIMATION_DELAY.NEW + ANIMATION_DURATION.NEW;
+  setTimeout(() => {
+    emit('animationComplete');
+  }, totalAnimationTime);
+};
+
+// move イベント発火時にアニメーション完了通知をスケジュール
+const handleMove = (direction: Direction) => {
+  emit('move', direction);
+  notifyAnimationComplete();
 };
 
 // スワイプ操作
@@ -115,7 +129,7 @@ const { direction: swipeDirection } = useSwipe(gridRef, {
 
     const dir = directionMap[swipeDirection.value];
     if (dir) {
-      emit('move', dir);
+      handleMove(dir);
     }
   },
 });

@@ -20,13 +20,12 @@ const gameOver = computed(() => game.value.gameOver);
 
 // 移動処理
 const move = (direction: Direction) => {
-  const result = game.value.move(direction);
-  if (result.moved) {
-    // アニメーション後にマージされたタイルを削除
-    setTimeout(() => {
-      game.value.cleanupMergedTiles();
-    }, 200);
-  }
+  game.value.move(direction);
+};
+
+// アニメーション完了時の処理
+const handleAnimationComplete = () => {
+  game.value.cleanupMergedTiles();
 };
 
 // キーボード操作
@@ -73,6 +72,7 @@ onUnmounted(() => {
       :game-over="gameOver"
       @move="move"
       @restart="restart"
+      @animation-complete="handleAnimationComplete"
     />
 
     <GameInstructions />
