@@ -45,12 +45,22 @@ const getTileTextColor = (value: number): string => {
 
 // タイル位置のスタイル計算
 const getTilePosition = (tile: Tile) => {
-  const cellSize = 100 / props.size;
+  // gap-2 = 0.5rem = 8px
+  const gap = 8;
+
+  // calc()を使用してグリッドセルと同じサイズと位置を計算
+  // セルサイズ = (100% - gap合計) / セル数
+  const cellSize = `calc((100% - ${(props.size - 1) * gap}px) / ${props.size})`;
+
+  // セル位置 = (セルサイズ + gap) * インデックス
+  const left = `calc((${cellSize} + ${gap}px) * ${tile.col})`;
+  const top = `calc((${cellSize} + ${gap}px) * ${tile.row})`;
+
   return {
-    left: `${tile.col * cellSize}%`,
-    top: `${tile.row * cellSize}%`,
-    width: `${cellSize}%`,
-    height: `${cellSize}%`,
+    left,
+    top,
+    width: cellSize,
+    height: cellSize,
   };
 };
 
@@ -68,8 +78,8 @@ const getTileClasses = (tile: Tile) => {
     getTileColor(tile.value),
     getTileTextColor(tile.value),
     {
-      'scale-110': tile.isNew,
-      'scale-125': tile.justMerged,
+      'scale-105': tile.isNew,
+      'scale-110': tile.justMerged,
     },
   ];
 };
