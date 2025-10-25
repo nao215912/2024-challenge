@@ -33,7 +33,6 @@ export class Tile {
     this.previousCol = this.col;
     this.justMerged = false;
     this.mergedThisTurn = false;
-    this.pendingRemoval = false;
     if (this.isNew) {
       this.isNew = false;
     }
