@@ -3,16 +3,13 @@ import { ref, computed, nextTick } from 'vue';
 import { useElementSize, useSwipe } from '@vueuse/core';
 import { Tile, type Direction } from '@/game';
 
-defineOptions({
-  name: 'GameGrid',
-});
+defineOptions({ name: 'GameGrid' });
 
 interface Props {
   tiles: Tile[];
   size: number;
   gameOver: boolean;
 }
-
 interface Emits {
   (e: 'restart'): void;
   (e: 'move', direction: Direction): void;
@@ -22,11 +19,27 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
-// グリッドサイズの監視（VueUse）
+// === サイズ計算 ===
 const gridRef = ref<HTMLElement>();
 const { width: containerWidth } = useElementSize(gridRef);
+const gap = 8; // gap-2 = 8px
+const cellSize = computed(() => {
+  const cw = containerWidth.value || 0;
+  const totalGap = (props.size - 1) * gap;
+  const size = (cw - totalGap) / props.size;
+  return Number.isFinite(size) && size > 0 ? size : 0; // NaN防止
+});
+const getTranslateStyle = (tile: Tile) => {
+  const left = tile.col * (cellSize.value + gap);
+  const top = tile.row * (cellSize.value + gap);
+  return {
+    transform: `translate(${left}px, ${top}px)`,
+    width: `${cellSize.value}px`,
+    height: `${cellSize.value}px`,
+  };
+};
 
-// タイル色
+// === 色 ===
 const getTileColor = (value: number): string => {
   const colors: Record<number, string> = {
     2: 'bg-[#eee4da]',
@@ -43,77 +56,69 @@ const getTileColor = (value: number): string => {
   };
   return colors[value] || 'bg-[#3c3a32]';
 };
+const getTileTextColor = (value: number) => (value <= 4 ? 'text-[#776e65]' : 'text-white');
 
-const getTileTextColor = (value: number): string => {
-  return value <= 4 ? 'text-[#776e65]' : 'text-white';
+// === アニメ順序制御 ===
+const appearing = ref<Set<number>>(new Set());
+const merging = ref<Set<number>>(new Set());
+const mergeQueue = ref<Set<number>>(new Set());
+const inFlight = ref(0);
+
+const ensureAppearOnce = (tile: Tile) => {
+  if (tile.isNew && !appearing.value.has(tile.id)) {
+    appearing.value.add(tile.id);
+    inFlight.value++;
+    nextTick(() => (tile.isNew = false));
+  }
 };
 
-// タイル位置とサイズの計算
-const gap = 8; // gap-2 = 8px
+const maybeStartMerge = (tileId: number) => {
+  if (mergeQueue.value.has(tileId)) {
+    mergeQueue.value.delete(tileId);
+    merging.value.add(tileId);
+    inFlight.value++;
+  }
+};
 
-const cellSize = computed(() => {
-  const totalGap = (props.size - 1) * gap;
-  return (containerWidth.value - totalGap) / props.size;
-});
-
-const getTranslateStyle = (tile: Tile) => {
-  const left = tile.col * (cellSize.value + gap);
-  const top = tile.row * (cellSize.value + gap);
+const tileAnimClass = (tile: Tile) => {
+  if (tile.isNew) ensureAppearOnce(tile);
+  if (tile.justMerged) {
+    mergeQueue.value.add(tile.id);
+    nextTick(() => (tile.justMerged = false));
+  }
   return {
-    transform: `translate(${left}px, ${top}px)`,
-    width: `${cellSize.value}px`,
-    height: `${cellSize.value}px`,
+    'is-new': appearing.value.has(tile.id),
+    'is-merged': merging.value.has(tile.id),
   };
 };
 
-// アニメーション状態管理
-const animatingTiles = ref<Set<number>>(new Set());
-
-// タイルのアニメーションクラスを計算
-const getTileAnimationClass = (tile: Tile) => {
-  // アニメーション中のタイルは何も返さない（アニメーション完了後）
-  if (animatingTiles.value.has(tile.id)) {
-    return '';
+const onMoveStart = () => {
+  inFlight.value++;
+};
+const onMoveEnd = (tileId: number) => {
+  maybeStartMerge(tileId);
+  inFlight.value = Math.max(0, inFlight.value - 1);
+  maybeEmitAnimationComplete();
+};
+const onAnimEnd = (tileId: number) => {
+  if (appearing.value.delete(tileId)) inFlight.value = Math.max(0, inFlight.value - 1);
+  if (merging.value.delete(tileId)) inFlight.value = Math.max(0, inFlight.value - 1);
+  maybeEmitAnimationComplete();
+};
+const maybeEmitAnimationComplete = () => {
+  if (
+    inFlight.value === 0 &&
+    mergeQueue.value.size === 0 &&
+    appearing.value.size === 0 &&
+    merging.value.size === 0
+  ) {
+    nextTick(() => emit('animationComplete'));
   }
-
-  // 新規タイルまたはマージされたタイルの場合
-  if (tile.isNew) {
-    // アニメーション開始をマーク
-    nextTick(() => {
-      animatingTiles.value.add(tile.id);
-      tile.isNew = false;
-    });
-    return 'is-new';
-  }
-
-  if (tile.justMerged) {
-    // アニメーション開始をマーク
-    nextTick(() => {
-      animatingTiles.value.add(tile.id);
-      tile.justMerged = false;
-    });
-    return 'is-merged';
-  }
-
-  return '';
 };
 
-// アニメーション終了時の処理
-const handleAnimEnd = (tileId: number) => {
-  animatingTiles.value.delete(tileId);
-}
-// すべてのアニメーション完了を検知して通知
-const notifyAnimationComplete = () => {
-  const totalAnimationTime = 280
-  setTimeout(() => {
-    emit('animationComplete');
-  }, totalAnimationTime);
-};
-
-// move イベント発火時にアニメーション完了通知をスケジュール
+// moveイベント
 const handleMove = (direction: Direction) => {
   emit('move', direction);
-  notifyAnimationComplete();
 };
 
 // スワイプ操作
@@ -126,11 +131,8 @@ const { direction: swipeDirection } = useSwipe(gridRef, {
       up: 'up',
       down: 'down',
     };
-
     const dir = directionMap[swipeDirection.value];
-    if (dir) {
-      handleMove(dir);
-    }
+    if (dir) handleMove(dir);
   },
 });
 </script>
@@ -146,22 +148,24 @@ const { direction: swipeDirection } = useSwipe(gridRef, {
       <div v-for="i in size * size" :key="i" class="bg-[#cdc1b4] rounded-lg" />
     </div>
 
-    <!-- タイル (外: translate / 内: scale) -->
+    <!-- タイル -->
     <div class="absolute inset-2">
       <div
         v-for="tile in tiles"
         :key="tile.id"
         class="tile-translate absolute rounded-lg"
         :style="getTranslateStyle(tile)"
+        @transitionrun="onMoveStart"
+        @transitionend="() => onMoveEnd(tile.id)"
       >
         <div
           class="tile-scale flex h-full w-full items-center justify-center font-bold rounded-lg transition-transform duration-150 ease-in-out"
           :class="[
             getTileColor(tile.value),
             getTileTextColor(tile.value),
-            getTileAnimationClass(tile),
+            tileAnimClass(tile),
           ]"
-          @animationend="() => handleAnimEnd(tile.id)"
+          @animationend="() => onAnimEnd(tile.id)"
         >
           <span :class="tile.value >= 1024 ? 'text-3xl' : 'text-4xl'">{{ tile.value }}</span>
         </div>
@@ -187,19 +191,16 @@ const { direction: swipeDirection } = useSwipe(gridRef, {
 </template>
 
 <style scoped>
-/* 外側は “移動のみ” を担当（transform: translate） */
 .tile-translate {
   transition: transform 150ms ease-in-out;
   will-change: transform;
 }
-
-/* 内側は “拡大縮小のみ” を担当（transform: scale） */
 .tile-scale {
   transform: scale(1);
   will-change: transform;
 }
 
-/* 出現アニメ（scale のみ動かす） */
+/* 出現アニメ */
 .is-new {
   animation: pop-in 150ms ease-out both;
 }
@@ -214,16 +215,16 @@ const { direction: swipeDirection } = useSwipe(gridRef, {
   }
 }
 
-/* 合成アニメ（scale のみ動かす） */
+/* 合成アニメ */
 .is-merged {
-  animation: merge-bounce 180ms ease-in-out both;
+  animation: merge-bounce 160ms ease-in-out both;
 }
 @keyframes merge-bounce {
   0% {
     transform: scale(1);
   }
-  45% {
-    transform: scale(1.1);
+  50% {
+    transform: scale(1.08);
   }
   100% {
     transform: scale(1);
