@@ -101,10 +101,10 @@ const getTileAnimationClass = (tile: Tile) => {
 // アニメーション終了時の処理
 const handleAnimEnd = (tileId: number) => {
   animatingTiles.value.delete(tileId);
-
+}
 // すべてのアニメーション完了を検知して通知
 const notifyAnimationComplete = () => {
-  const totalAnimationTime = ANIMATION_DELAY.NEW + ANIMATION_DURATION.NEW;
+  const totalAnimationTime = 280
   setTimeout(() => {
     emit('animationComplete');
   }, totalAnimationTime);
