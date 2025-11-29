@@ -24,6 +24,8 @@ const tileStyle = computed(() => {
   const y = props.tile.row * (size + gap) + gap;
   return {
     transform: `translate(${x}px, ${y}px)`,
+    "--x": `${x}px`,
+    "--y": `${y}px`,
   };
 });
 
@@ -63,25 +65,25 @@ const valueClass = computed(() =>
 
 @keyframes pop {
   0% {
-    transform: scale(0) translate(var(--x, 0), var(--y, 0));
+    transform: translate(var(--x, 0), var(--y, 0)) scale(0);
   }
   80% {
-    transform: scale(1.1) translate(var(--x, 0), var(--y, 0));
+    transform: translate(var(--x, 0), var(--y, 0)) scale(1.1);
   }
   100% {
-    transform: scale(1) translate(var(--x, 0), var(--y, 0));
+    transform: translate(var(--x, 0), var(--y, 0)) scale(1);
   }
 }
 
 @keyframes merge {
   0% {
-    transform: scale(1) translate(var(--x, 0), var(--y, 0));
+    transform: translate(var(--x, 0), var(--y, 0)) scale(1);
   }
   50% {
-    transform: scale(1.2) translate(var(--x, 0), var(--y, 0));
+    transform: translate(var(--x, 0), var(--y, 0)) scale(1.2);
   }
   100% {
-    transform: scale(1) translate(var(--x, 0), var(--y, 0));
+    transform: translate(var(--x, 0), var(--y, 0)) scale(1);
   }
 }
 
