@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { GameEngine, type Direction } from '@/game';
+import { onMounted, onUnmounted } from 'vue';
+import type { Direction } from '@/game';
+import { useGameStore } from '@/stores/game';
 import GameHeader from '@/components/GameHeader.vue';
 import GameControls from '@/components/GameControls.vue';
 import GameGrid from '@/components/GameGrid.vue';
@@ -10,23 +11,8 @@ defineOptions({
   name: 'GameView',
 });
 
-const GRID_SIZE = 4;
-
-const game = ref<GameEngine>(new GameEngine({ size: GRID_SIZE }));
-const tiles = computed(() => game.value.tiles);
-const score = computed(() => game.value.score);
-const bestScore = computed(() => game.value.bestScore);
-const gameOver = computed(() => game.value.gameOver);
-
-// 移動処理
-const move = (direction: Direction) => {
-  game.value.move(direction);
-};
-
-// アニメーション完了時の処理
-const handleAnimationComplete = () => {
-  game.value.cleanupMergedTiles();
-};
+// Store
+const gameStore = useGameStore();
 
 // キーボード操作
 const handleKeydown = (event: KeyboardEvent) => {
@@ -40,18 +26,12 @@ const handleKeydown = (event: KeyboardEvent) => {
   const direction = keyMap[event.key];
   if (direction) {
     event.preventDefault();
-    move(direction);
+    gameStore.move(direction);
   }
-};
-
-// リスタート
-const restart = () => {
-  game.value.reset();
 };
 
 // ライフサイクル
 onMounted(() => {
-  game.value.reset();
   window.addEventListener('keydown', handleKeydown);
 });
 
@@ -62,24 +42,24 @@ onUnmounted(() => {
 
 <template>
   <div class="flex flex-col items-center justify-center min-h-screen bg-[#faf8ef] p-4">
-    <GameHeader :score="score" :best-score="bestScore" />
+    <GameHeader :score="gameStore.score" :best-score="gameStore.bestScore" />
 
-    <GameControls class="mb-4" @restart="restart" />
+    <GameControls class="mb-4" @restart="gameStore.reset" />
 
     <GameGrid
-      :tiles="tiles"
-      :size="GRID_SIZE"
-      :game-over="gameOver"
-      @move="move"
-      @restart="restart"
-      @animation-complete="handleAnimationComplete"
+      :tiles="gameStore.tiles"
+      :size="gameStore.size"
+      :game-over="gameStore.gameOver"
+      @move="gameStore.move"
+      @restart="gameStore.reset"
+      @animation-complete="gameStore.cleanupMergedTiles"
     />
 
     <GameInstructions />
 
     <!-- アクセシビリティ用のライブリージョン -->
     <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-      <span v-if="gameOver">Game Over. Your score is {{ score }}.</span>
+      <span v-if="gameStore.gameOver">Game Over. Your score is {{ gameStore.score }}.</span>
     </div>
   </div>
 </template>
